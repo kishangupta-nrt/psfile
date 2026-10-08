@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  super_admin
+  reseller
+  customer
+  api_user
+}
+
+enum CampaignStatus {
+  queued
+  sending
+  stopped
+  completed
+  failed
+}
+
+enum CampaignType {
+  sms
+  two_way
+  voice
+  wa
+  email
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  phone        String?
+  role         Role     @default(customer)
+  ownerId      String?
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  wallet       Wallet?
+}
+
+model RoleDef {
+  id        String @id @default(cuid())
+  name      String @unique
+  abilities Json
+}
+
+model Wallet {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id])
+  balanceCredits Int      @default(0)
+  lockedCredits  Int      @default(0)
+  updatedAt      DateTime @updatedAt
+}
+
+model WalletTxn {
+  id        String   @id @default(cuid())
+  userId    String
+  delta     Int
+  reason    String
+  refId     String?
+  meta      Json?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model CreditRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  status    String   @default("pending")
+  reply     String?
+  createdAt DateTime @default(now())
+}
+
+model SenderId {
+  id        String   @id @default(cuid())
+  userId    String
+  sender    String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model NotificationTemplate {
+  id        String  @id @default(cuid())
+  name      String
+  body      String
+  lang      String  @default("en")
+  createdBy String?
+}
+
+model ContactGroup {
+  id      String @id @default(cuid())
+  ownerId String
+  name    String
+}
+
+model Contact {
+  id      String  @id @default(cuid())
+  groupId String
+  mobile  String
+  name    String?
+  vars    Json?
+
+  @@index([groupId])
+}
+
+model Blacklist {
+  mobile    String   @id
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  ownerId     String
+  type        CampaignType   @default(sms)
+  senderId    String?
+  message     String
+  filePath    String?
+  scheduledAt DateTime?
+  timezone    String?
+  status      CampaignStatus @default(queued)
+  total       Int            @default(0)
+  delivered   Int            @default(0)
+  failed      Int            @default(0)
+  createdAt   DateTime       @default(now())
+
+  @@index([ownerId])
+}
+
+model Message {
+  id         String    @id @default(cuid())
+  campaignId String
+  mobile     String
+  status     String    @default("pending")
+  dlrCode    String?
+  dlrText    String?
+  cost       Int       @default(1)
+  sentAt     DateTime?
+
+  @@index([campaignId])
+}
+
+model ApiKey {
+  id       String    @id @default(cuid())
+  userId   String
+  keyHash  String    @unique
+  ips      String[]
+  enabled  Boolean   @default(true)
+  lastUsed DateTime?
+}
+
+model Webhook {
+  id     String  @id @default(cuid())
+  userId String
+  event  String
+  url    String
+  secret String?
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model LoginLog {
+  id     String   @id @default(cuid())
+  userId String
+  ip     String?
+  ua     String?
+  at     DateTime @default(now())
+}
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  actorId  String?
+  action   String
+  entity   String
+  entityId String?
+  diff     Json?
+  at       DateTime @default(now())
+}
+
+// NOTE: No dlt_* models by design (DLT_DISABLED). See DATABASE_SCHEMA.md.
+

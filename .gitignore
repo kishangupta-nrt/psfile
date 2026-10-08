@@ -1,0 +1,10 @@
+# Local env — NEVER commit. See .env.example for placeholders.
+.env
+.env.local
+.env.*.local
+node_modules/
+dist/
+.next/
+out/
+*.log
+.DS_Store
